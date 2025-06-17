@@ -1,12 +1,96 @@
 # React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+    > npm create vite@latest bastian-wallet -- --template react
+    > cd bastian-wallet
+    > npm install
 
-Currently, two official plugins are available:
+### Instalación de libs necesarias
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+    > npm install @cosmjs/proto-signing buffer
+    > npm install @esbuild-plugins/node-globals-polyfill --save-dev
+    > npm install buffer
+    > npm install rollup-plugin-node-polyfills --save-dev
 
-## Expanding the ESLint configuration
+ ### Agregá polyfills (muy importante para que funcione Buffer)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+ 👉 Modificá ``vite.config.js``:
+
+    import { defineConfig } from 'vite'
+    import react from '@vitejs/plugin-react'
+    import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
+    import rollupNodePolyFill from 'rollup-plugin-node-polyfills'
+
+    export default defineConfig({
+    plugins: [react()],
+    optimizeDeps: {
+        esbuildOptions: {
+        plugins: [
+            NodeGlobalsPolyfillPlugin({
+            buffer: true
+            })
+        ]
+        }
+    },
+    define: {
+        global: 'globalThis'
+    },
+    resolve: {
+        alias: {
+        buffer: 'buffer',
+        }
+    },
+    build: {
+        rollupOptions: {
+        plugins: [rollupNodePolyFill()]
+        }
+    }
+    })
+
+👉 Y ``en main.jsx``, agregá esto arriba de todo:
+
+    import { Buffer } from 'buffer';
+    window.Buffer = Buffer;
+
+💡 Contenido de App.jsx (funcional)
+
+    import React, { useState } from 'react';
+    import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
+
+    function App() {
+    const [walletInfo, setWalletInfo] = useState(null);
+
+    const generateWallet = async () => {
+        const wallet = await DirectSecp256k1HdWallet.generate(12, {
+        prefix: "cosmos",
+        });
+        const accounts = await wallet.getAccounts();
+        setWalletInfo({
+        address: accounts[0].address,
+        mnemonic: wallet.mnemonic,
+        });
+    };
+
+    return (
+        <div style={{ padding: 20 }}>
+        <h1>Generador de Wallet Cosmos</h1>
+        <button onClick={generateWallet}>Generar Wallet</button>
+        {walletInfo && (
+            <div style={{ marginTop: 20 }}>
+            <p><strong>Dirección:</strong> {walletInfo.address}</p>
+            <p><strong>Mnemonic:</strong> {walletInfo.mnemonic}</p>
+            </div>
+        )}
+        </div>
+    );
+    }
+
+    export default App;
+
+
+### 🚀 Ejecutá la app
+
+    > npm run dev
+
+
+
+
